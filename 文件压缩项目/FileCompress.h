@@ -13,12 +13,11 @@ using namespace std;
 //#################   文件压缩类  ########################
 //########################################################
 
-//结点信息，存放字符，出现此时，编码
+//存储信息，存放字符，字符出现次数，编码
 struct CharData {
-	unsigned char _ch;
+	char _ch;
 	size_t _count;
 	string code;
-
 
 	bool operator==(const CharData& data)
 	{
@@ -72,8 +71,8 @@ void FileCompress::Compress(const char* file)//压缩准备
 {
 	//1. 统计字符个数，并写入哈希表中
 	FILE* fp = fopen(file,"r");
-	unsigned char ch;
-	while ((ch = fgetc(fp)) && (char)ch != EOF)
+	int ch;
+	while ((ch = fgetc(fp)) != EOF)
 	{
 		_hashtable[ch]._count++;
 	}
@@ -93,13 +92,58 @@ void FileCompress::Compress(const char* file)//压缩准备
 void FileCompress::_Docompress(const char* file)//开始压缩
 {
 	//1. 构建压缩文件
+	string FileName = file;
+	FileName = FileName + ".huffman";
+	FILE *fp_w = fopen(FileName.c_str(), "w");
 
-	//2. 先将统计好的字符和字符数，写入压缩文件总，方便解压
+	//2. 先将统计好的字符和字符数写入压缩文件中，方便解压
+	struct _data {
+		char _ch;
+		size_t _count;
+	}data;
+
+	for (int i = 0; i < 256; i++)
+	{
+		if (_hashtable[i]._count > 0)
+		{
+			data._ch = i;
+			data._count = _hashtable[i]._count;
+			fwrite(&data, sizeof(data), 1, fp_w);
+		}
+	}
+	data._count = 0;
+	fwrite(&data, sizeof(data), 1, fp_w);
 
 	//3. 从源文件中读取一个字符根据HuffmanTree,构成几个编码位并
 	//	 保存下来,够8位将其写入压缩文件,直到源文件全部被读取完
-
+	FILE *fp_r = fopen(file, "r");
+	int ch; //读取字符
+	int n = 0; //记录比特位数
+	char buf; //存放压缩编码
+	//while (!feof(fp_r))
+	//{
+	//	ch = fgetc(fp_r);
+	while ((ch = fgetc(fp_r)) != EOF)
+	{
+		string* code = &_hashtable[ch].code; //获得字符代码
+		for (int i = 0; i < code->size(); i++)
+		{
+			buf |= 1 << n++;
+			if (n > 7)
+			{
+				fputc((int)ch, fp_w);
+				n = 0;
+			}
+		}
+	}
+	if (n > 7)
+	{
+		fputc((int)ch, fp_w);
+	}
+	fclose(fp_r);
+	fclose(fp_w);
 }
+
 void FileCompress::UnCompress(const char* file)//解压准备
 {
 	//1.先从文件中将要构成HuffmanTree的数据(字符和字符总数)取出

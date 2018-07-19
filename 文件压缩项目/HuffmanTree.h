@@ -27,7 +27,7 @@ class HuffmanTree {
 	struct compare {
 		bool operator()(Node* n1, Node* n2)
 		{
-			return  (n1->_data > ; n2->_data);
+			return  (n1->_data >  n2->_data);
 		}
 	};
 
@@ -85,9 +85,4 @@ private:
 private:
 	Node* _root;
 };
-
-
-
-
-
 
