@@ -102,7 +102,7 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 	//1. 构建压缩文件
 	string FileName = file;
 	FileName = FileName + ".huffman";
-	FILE *fp_w = fopen(FileName.c_str(), "w");
+	FILE *fp_w = fopen(FileName.c_str(), "wb");
 
 	//2. 先将统计好的字符和字符数写入压缩文件中，方便解压
 	struct _data {
@@ -195,7 +195,7 @@ void FileCompress::UnCompress(const char* file)//解压准备
 	cout << "解压准备..." << endl;
 	//1.先从压缩文件中将要构成HuffmanTree的数据(字符和字符总数)取出
 	struct Data { char _ch; size_t _count; }data;
-	FILE* fp_r = fopen(file, "r");
+	FILE* fp_r = fopen(file, "rb");
 	fread(&data, sizeof(data), 1, fp_r);
 	int num = 0;
 	while (data._count != 0)
