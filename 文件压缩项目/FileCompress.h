@@ -68,9 +68,11 @@ FileCompress::FileCompress()//缺省构造函数
 		_hashtable[i]._ch = i;
 		_hashtable[i]._count = 0;
 	}	
+
 }
 void FileCompress::Compress(const char* file)//压缩准备
 {
+	cout << "压缩准备阶段..." << endl;
 	//1. 统计字符个数，并写入哈希表中
 	FILE* fp = fopen(file,"r");
 	int ch;
@@ -78,17 +80,21 @@ void FileCompress::Compress(const char* file)//压缩准备
 	{
 		_hashtable[ch]._count++;
 	}
+	cout << "源文件数据统计 完成..." << endl;
 
 	//2. 用哈希表构建huffmanTree
 	CharData end;
 	end._count = 0;
 	HuffmanTree<CharData> Tree(_hashtable, 256, end);
-	
+	cout << "Huffman树构建 完成..." << endl;
 	//3. 根据huffmanTree生成Huffman编码
 	CreateHuffmanCode(Tree.GetRoot());
+	cout << "生成Huffman编码 完成..." << endl;
 
 	//4. 开始压缩
+	cout << "开始压缩..." << endl;
 	_Docompress(file);
+	cout << "压缩完成..." << endl;
 }
 
 void FileCompress::_Docompress(const char* file)//开始压缩
@@ -103,16 +109,18 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 		char _ch;
 		size_t _count;
 	}data;
-
+	int num = 0;
 	for (int i = 0; i < 256; i++)
 	{
 		if (_hashtable[i]._count > 0)
 		{
+			++num;
 			data._ch = i;
 			data._count = _hashtable[i]._count;
 			fwrite(&data, sizeof(data), 1, fp_w);
 		}
 	}
+	cout << num << endl;
 	data._count = 0;
 	fwrite(&data, sizeof(data), 1, fp_w);
 
@@ -152,13 +160,13 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 				buf &= ~(1 << n++);
 			if (n > 7)
 			{
-				for (int i = 0; i < 8; i++)
-				{
-					if ( buf & (1 << i))
-						cout << 1;
-					else cout << 0;
-				}
-				cout << endl;
+				//for (int i = 0; i < 8; i++)
+				//{
+				//	if ( buf & (1 << i))
+				//		cout << 1;
+				//	else cout << 0;
+				//}
+				//cout << endl;
 
 				fputc((int)buf, fp_w);
 				n = 0;
@@ -168,13 +176,13 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 	}
 	if (n < 7)
 	{
-		for (int i = 0; i < n; i++)
-		{
-			if (  buf & (1 << i) )
-				cout << 1;
-			else cout << 0;
-		}
-		cout << endl;
+		//for (int i = 0; i < n; i++)
+		//{
+		//	if (  buf & (1 << i) )
+		//		cout << 1;
+		//	else cout << 0;
+		//}
+		//cout << endl;
 
 		fputc((int)buf, fp_w);
 	}
@@ -184,23 +192,29 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 
 void FileCompress::UnCompress(const char* file)//解压准备
 {
+	cout << "解压准备..." << endl;
 	//1.先从压缩文件中将要构成HuffmanTree的数据(字符和字符总数)取出
-	struct Data { char ch; size_t count; }data;
+	struct Data { char _ch; size_t _count; }data;
 	FILE* fp_r = fopen(file, "r");
 	fread(&data, sizeof(data), 1, fp_r);
-	while (data.count != 0)
+	int num = 0;
+	while (data._count != 0)
 	{
-		_hashtable[data.ch]._count = data.count;
+		_hashtable[(unsigned char)data._ch]._count = data._count;
 		fread(&data, sizeof(data), 1, fp_r);
+		cout << num++ << endl;
 	}
 
 	//2.构建HuffmanTree
 	CharData end;
 	end._count = 0;
 	HuffmanTree<CharData> tree(_hashtable, 256, end);
+	cout << "huffman树构建..." << endl;
 
 	//3.开始解压
+	cout << "开始解压..." << endl;
 	_Douncompress(file, fp_r, tree.GetRoot());
+	cout << "解压完成..." << endl;
 }
 void  FileCompress::_Douncompress(const char* file, FILE* fp_r, Node* _root)//开始解压
 {
@@ -258,9 +272,10 @@ void FileCompress::CreateHuffmanCode(Node* root)//生成Huffman编码
 	//如果是叶子结点，就把编码写进hashtable里存储
 	if (root->_left == NULL && root->_right == NULL)
 	{
-		_hashtable[root->_data._ch].code = root->_data.code;
+		_hashtable[(unsigned char)root->_data._ch].code = root->_data.code;
 		return;
 	}
+
 
 	CreateHuffmanCode(root->_left);
 	CreateHuffmanCode(root->_right);

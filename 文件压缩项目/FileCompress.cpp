@@ -20,5 +20,6 @@ int main()
 {
 	compare_test();
 	uncompare_test();
+	system("pause");
 	return 0;
 }
