@@ -11,7 +11,8 @@ void compare_test()
 
 void uncompare_test()
 {
-
+	FileCompress fc;
+	fc.UnCompress(TXT_NAME_un);
 }
 
 

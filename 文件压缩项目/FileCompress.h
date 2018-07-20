@@ -1,6 +1,8 @@
 #pragma once
 #pragma warning(disable:4996)
 
+#include <iostream>
+
 //########################################################
 //###################   头文件  ##########################
 //########################################################
@@ -51,7 +53,7 @@ public:
 	void Compress(const char* file);//压缩准备
 	void _Docompress(const char* file);//开始压缩
 	void UnCompress(const char* file);//解压准备
-	void _Douncompress(const char* file);//开始解压
+	void _Douncompress(const char* file, FILE* fp_r, Node* _root);//开始解压
 	void CreateHuffmanCode(Node* root);//生成Huffman编码
 
 private:
@@ -120,25 +122,61 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 	int ch; //读取字符
 	int n = 0; //记录比特位数
 	char buf; //存放压缩编码
+
 	//while (!feof(fp_r))
 	//{
 	//	ch = fgetc(fp_r);
+	//	if (ch == EOF)
+	//		printf("saf");
+	//	string* code = &_hashtable[ch].code; //获得字符代码
+	//	for (int i = 0; i < code->size(); i++)
+	//	{
+	//		buf |= 1 << n++;
+	//		if (n > 7)
+	//		{
+	//			fputc((int)ch, fp_w);
+	//			n = 0;
+	//		}
+	//	}
+	//}
+
 	while ((ch = fgetc(fp_r)) != EOF)
 	{
-		string* code = &_hashtable[ch].code; //获得字符代码
-		for (int i = 0; i < code->size(); i++)
+		string code = _hashtable[ch].code; //获得字符代码
+		for (int i = 0; i < code.size(); i++)
 		{
-			buf |= 1 << n++;
+
+			if (code[i] == '1')
+				buf |= (1 << n++);
+			else
+				buf &= ~(1 << n++);
 			if (n > 7)
 			{
-				fputc((int)ch, fp_w);
+				for (int i = 0; i < 8; i++)
+				{
+					if ( buf & (1 << i))
+						cout << 1;
+					else cout << 0;
+				}
+				cout << endl;
+
+				fputc((int)buf, fp_w);
 				n = 0;
 			}
+
 		}
 	}
-	if (n > 7)
+	if (n < 7)
 	{
-		fputc((int)ch, fp_w);
+		for (int i = 0; i < n; i++)
+		{
+			if (  buf & (1 << i) )
+				cout << 1;
+			else cout << 0;
+		}
+		cout << endl;
+
+		fputc((int)buf, fp_w);
 	}
 	fclose(fp_r);
 	fclose(fp_w);
@@ -146,17 +184,62 @@ void FileCompress::_Docompress(const char* file)//开始压缩
 
 void FileCompress::UnCompress(const char* file)//解压准备
 {
-	//1.先从文件中将要构成HuffmanTree的数据(字符和字符总数)取出
+	//1.先从压缩文件中将要构成HuffmanTree的数据(字符和字符总数)取出
+	struct Data { char ch; size_t count; }data;
+	FILE* fp_r = fopen(file, "r");
+	fread(&data, sizeof(data), 1, fp_r);
+	while (data.count != 0)
+	{
+		_hashtable[data.ch]._count = data.count;
+		fread(&data, sizeof(data), 1, fp_r);
+	}
 
 	//2.构建HuffmanTree
+	CharData end;
+	end._count = 0;
+	HuffmanTree<CharData> tree(_hashtable, 256, end);
 
 	//3.开始解压
+	_Douncompress(file, fp_r, tree.GetRoot());
 }
-void  FileCompress::_Douncompress(const char* file)//开始解压
+void  FileCompress::_Douncompress(const char* file, FILE* fp_r, Node* _root)//开始解压
 {
 	//1.创建解压文件
+	string FileName = file;
+	for (int i = 0; i < 7; i++)
+		FileName.pop_back();
+	FileName += "un";
+	FILE* fp_w = fopen(FileName.c_str(), "w");
+
+
 
 	//2.从压缩文件中读取一个字符，开始从HuffmanTree上开始查找，直到叶子结点，写入解压文件
+	int ch = 0;
+	int num = _root->_data._count;
+	Node* cur = _root;
+	while ( num > 0)
+	{
+		ch = fgetc(fp_r);
+		for (int i = 0; i < 8; i++)
+		{
+			if ((ch & (1 << i)) ) //为1
+				cur = cur->_left;
+			else
+				cur = cur->_right;
+			if (cur && cur->_left == NULL && cur->_right == NULL)//找到叶子结点
+			{
+				--num;
+				fputc((int)cur->_data._ch, fp_w);
+				cur = _root;
+				if (num == 0)
+					break;
+			}
+		}
+	}
+
+
+	fclose(fp_w);
+	fclose(fp_r);
 }
 void FileCompress::CreateHuffmanCode(Node* root)//生成Huffman编码
 {
@@ -167,7 +250,7 @@ void FileCompress::CreateHuffmanCode(Node* root)//生成Huffman编码
 	Node* parent = root->_parent;
 	if (parent)
 	{
-		if (root == parent->_left)
+		if (root == parent->_left)//左边+1
 			root->_data.code = parent->_data.code + "1";
 		else
 			root->_data.code = parent->_data.code + "0";

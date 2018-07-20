@@ -59,7 +59,7 @@ public:
 			newNode = new Node(pN1->_data + pN2->_data);
 			pN1->_parent = newNode;
 			pN2->_parent = newNode;
-			if (pN1->_data > pN2->_data)
+			if (pN1->_data > pN2->_data)//出现频率高的放左边
 			{
 				newNode->_left  = pN1;
 				newNode->_right = pN2;
